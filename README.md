@@ -93,6 +93,34 @@ Deflate is not canonical, so our compressed bytes differ from the game's while
 the CBOR payload underneath is byte-identical. Unmodelled preset fields are
 carried through untouched, so re-exporting an imported route loses nothing.
 
+## Sharing routes (optional)
+
+Without a database the app runs entirely locally and every sharing endpoint
+returns 503 with an explanation — nothing else is affected.
+
+To turn sharing on, point `DATABASE_URL` at a Postgres database (Neon works
+well on serverless) and create the schema:
+
+```bash
+echo 'DATABASE_URL="postgresql://…"' >> .env.local
+npm run db:setup
+```
+
+Set the same variable on your host. Then **Share** publishes the route and
+returns a short link like `/r/x7k2p9`.
+
+How it works:
+
+- The stored payload is the same `!~MDT2~` string the game uses, so shared
+  routes go through the codec the tests already cover.
+- Creating a link also issues an **edit token**, kept in the creator's browser.
+  Pressing *Update link* rewrites the route at the same URL; anyone else with
+  the link can only read it. The token is matched in the `WHERE` clause, so a
+  wrong token updates nothing.
+- Anonymous writes are rate-limited per IP in Postgres (serverless instances
+  share no memory) and payloads are capped. The limiter fails open, so a
+  database hiccup never blocks a legitimate save.
+
 ## Deploying
 
 `public/` is committed, so any static-friendly host builds this as-is — there

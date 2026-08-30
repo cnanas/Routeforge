@@ -34,7 +34,13 @@ const TOOLS: { id: Tool; label: string; glyph: string }[] = [
 
 const DRAW_COLORS = ['e03131', 'f59f00', '2f9e44', '1971c2', '9c36b5', '212529', 'ffffff']
 
-export default function Planner({ index }: { index: DungeonIndex }) {
+interface PlannerProps {
+  index: DungeonIndex
+  /** Present when arriving via a /r/<id> share link. */
+  shared?: { id: string; payload: string }
+}
+
+export default function Planner({ index, shared }: PlannerProps) {
   const byIdx = useMemo(() => new Map(index.dungeons.map((d) => [d.idx, d])), [index])
   const seasons = useMemo(() => index.seasons ?? [], [index])
 
@@ -76,13 +82,33 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   const [inspected, setInspected] = useState<Enemy | null>(null)
   /** Which panel is raised as a bottom sheet on mobile. Unused on desktop. */
   const [sheet, setSheet] = useState<'dungeons' | 'route' | 'tools' | 'enemy' | null>(null)
-  const [dialog, setDialog] = useState<'import' | 'export' | 'library' | null>(null)
+  const [dialog, setDialog] = useState<'import' | 'export' | 'library' | 'share' | null>(null)
   const [showOutlines, setShowOutlines] = useState(true)
   const [spells, setSpells] = useState<Record<string, SpellInfo>>({})
   const [saved, setSaved] = useState<StoredRoute[]>([])
   const [routeId, setRouteId] = useState(() => `r${Date.now().toString(36)}`)
+  const [shareId, setShareId] = useState<string | null>(shared?.id ?? null)
+  const [shareBusy, setShareBusy] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => setSaved(listRoutes()), [])
+
+  // A shared link arrives as an MDT string, so it decodes through exactly the
+  // same path as a route pasted out of the game.
+  useEffect(() => {
+    if (!shared) return
+    try {
+      const { preset, dialect } = decodeMdtString(shared.payload)
+      const loaded = presetToRoute(preset, dialect)
+      const target = index.dungeons.find((d) => d.idx === loaded.dungeonIdx)
+      if (target) setSlug(target.slug)
+      dispatch({ type: 'replace', route: loaded })
+      setCurrentPull(0)
+    } catch {
+      setShareError('That shared route could not be read.')
+    }
+  }, [shared, index])
 
   // Spell names/icons are one shared file, loaded once and reused everywhere.
   useEffect(() => {
@@ -263,6 +289,57 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   )
 
   const persist = () => setSaved(saveRoute(routeId, route))
+
+  /** Edit tokens are the only proof of ownership, so they live client-side. */
+  const tokenKey = (id: string) => `mdt-web.share-token.${id}`
+
+  const shareUrl = shareId ? `${typeof window === 'undefined' ? '' : window.location.origin}/r/${shareId}` : ''
+
+  const share = async () => {
+    setShareBusy(true)
+    setShareError(null)
+    try {
+      const payload = encodeMdtString(routeToPreset(route), route.dialect)
+      let token: string | null = shareId ? localStorage.getItem(tokenKey(shareId)) : null
+
+      // Updating in place keeps the link you already handed out working;
+      // without the token we can only publish a new one.
+      if (shareId && token) {
+        const res = await fetch(`/api/routes/${shareId}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ payload, name: route.name, editToken: token }),
+        })
+        if (res.ok) {
+          setDialog('share')
+          return
+        }
+        if (res.status !== 403) throw new Error((await res.json())?.error ?? 'Could not update the link.')
+        // Not ours to edit — fall through and publish a fresh one.
+      }
+
+      const res = await fetch('/api/routes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ payload, name: route.name }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? 'Could not create a link.')
+      token = data.editToken as string
+      try {
+        localStorage.setItem(tokenKey(data.id), token)
+      } catch {
+        // A viewer with storage disabled just loses the ability to re-edit.
+      }
+      setShareId(data.id as string)
+      setDialog('share')
+    } catch (e) {
+      setShareError(e instanceof Error ? e.message : String(e))
+      setDialog('share')
+    } finally {
+      setShareBusy(false)
+    }
+  }
 
   const canUndo = history.past.length > 0
   const canRedo = history.future.length > 0
@@ -549,6 +626,9 @@ export default function Planner({ index }: { index: DungeonIndex }) {
             </button>
             <button onClick={() => setDialog('import')}>Import</button>
             <button onClick={() => setDialog('export')}>Export</button>
+            <button onClick={share} disabled={shareBusy}>
+              {shareBusy ? 'Sharing…' : shareId ? 'Update link' : 'Share'}
+            </button>
             <button onClick={persist}>Save</button>
             <button onClick={() => setDialog('library')}>Library</button>
             <button
@@ -667,6 +747,48 @@ export default function Planner({ index }: { index: DungeonIndex }) {
                   >
                     Copy
                   </button>
+                </div>
+              </>
+            )}
+
+            {dialog === 'share' && (
+              <>
+                <h2>{shareError ? 'Could not share' : 'Share this route'}</h2>
+                {shareError ? (
+                  <>
+                    <p className="modal-error">{shareError}</p>
+                    <p className="modal-hint">
+                      Sharing needs a database. Export the route string instead — it works
+                      anywhere and never expires.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="modal-hint">
+                      Anyone with this link can open the route. Editing and pressing
+                      <strong> Update link </strong> keeps the same URL.
+                    </p>
+                    <div className="share-row">
+                      <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} />
+                      <button
+                        className="primary"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard?.writeText(shareUrl)
+                            setCopied(true)
+                            window.setTimeout(() => setCopied(false), 1600)
+                          } catch {
+                            setCopied(false)
+                          }
+                        }}
+                      >
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </>
+                )}
+                <div className="modal-actions">
+                  <button onClick={() => setDialog(null)}>Close</button>
                 </div>
               </>
             )}

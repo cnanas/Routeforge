@@ -7,10 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx tools/test-codec.ts && tsx tools/test-route.ts && tsx tools/test-real-string.ts && tsx tools/test-history.ts && tsx tools/test-hull.ts && node tools/verify-indices.mjs",
-    "data": "node tools/extract.mjs && node tools/portraits.mjs && node tools/marker-icons.mjs && node tools/spells.mjs"
+    "test": "tsx tools/test-codec.ts && tsx tools/test-route.ts && tsx tools/test-real-string.ts && tsx tools/test-history.ts && tsx tools/test-hull.ts && tsx tools/test-share.ts && node tools/verify-indices.mjs",
+    "data": "node tools/extract.mjs && node tools/portraits.mjs && node tools/marker-icons.mjs && node tools/spells.mjs",
+    "db:setup": "node --env-file-if-exists=.env.local tools/db-setup.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "cbor-x": "^1.6.6",
     "leaflet": "^1.9.4",
     "next": "^16.3.3",
