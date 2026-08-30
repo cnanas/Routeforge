@@ -1,0 +1,202 @@
+{
+  "canvas": {
+    "width": 840,
+    "height": 560,
+    "cols": 15,
+    "rows": 10
+  },
+  "seasons": [
+    {
+      "name": "Midnight Season 2",
+      "current": true,
+      "dungeonIdx": [
+        160,
+        161,
+        162,
+        163,
+        164,
+        42,
+        20,
+        17
+      ],
+      "missing": []
+    },
+    {
+      "name": "Midnight Season 1",
+      "current": false,
+      "dungeonIdx": [
+        45,
+        11,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ],
+      "missing": []
+    }
+  ],
+  "dungeons": [
+    {
+      "idx": 45,
+      "slug": "algethar-academy",
+      "name": "Algeth'ar Academy",
+      "shortName": "AA",
+      "totalCount": 460,
+      "sublevels": 1,
+      "enemyCount": 17,
+      "cloneCount": 122
+    },
+    {
+      "idx": 164,
+      "slug": "altar-of-fangs",
+      "name": "Altar of Fangs",
+      "shortName": "FANG",
+      "totalCount": 817,
+      "sublevels": 1,
+      "enemyCount": 21,
+      "cloneCount": 157
+    },
+    {
+      "idx": 161,
+      "slug": "den-of-nalorakk",
+      "name": "Den of Nalorakk",
+      "shortName": "NALO",
+      "totalCount": 729,
+      "sublevels": 1,
+      "enemyCount": 32,
+      "cloneCount": 201
+    },
+    {
+      "idx": 17,
+      "slug": "kings-rest",
+      "name": "Kings' Rest",
+      "shortName": "KR",
+      "totalCount": 608,
+      "sublevels": 1,
+      "enemyCount": 39,
+      "cloneCount": 98
+    },
+    {
+      "idx": 153,
+      "slug": "magisters-terrace",
+      "name": "Magister's Terrace",
+      "shortName": "MT",
+      "totalCount": 585,
+      "sublevels": 1,
+      "enemyCount": 25,
+      "cloneCount": 277
+    },
+    {
+      "idx": 154,
+      "slug": "maisara-caverns",
+      "name": "Maisara Caverns",
+      "shortName": "CAVNS",
+      "totalCount": 607,
+      "sublevels": 1,
+      "enemyCount": 28,
+      "cloneCount": 351
+    },
+    {
+      "idx": 160,
+      "slug": "murder-row",
+      "name": "Murder Row",
+      "shortName": "MURD",
+      "totalCount": 655,
+      "sublevels": 1,
+      "enemyCount": 41,
+      "cloneCount": 224
+    },
+    {
+      "idx": 155,
+      "slug": "nexus-point-xenas",
+      "name": "Nexus Point Xenas",
+      "shortName": "NEXUS",
+      "totalCount": 596,
+      "sublevels": 1,
+      "enemyCount": 34,
+      "cloneCount": 146
+    },
+    {
+      "idx": 150,
+      "slug": "pit-of-saron",
+      "name": "Pit of Saron",
+      "shortName": "PIT",
+      "totalCount": 643,
+      "sublevels": 1,
+      "enemyCount": 23,
+      "cloneCount": 230
+    },
+    {
+      "idx": 42,
+      "slug": "ruby-life-pools",
+      "name": "Ruby Life Pools",
+      "shortName": "RLP",
+      "totalCount": 551,
+      "sublevels": 1,
+      "enemyCount": 24,
+      "cloneCount": 147
+    },
+    {
+      "idx": 11,
+      "slug": "seat-of-the-triumvirate",
+      "name": "Seat of the Triumvirate",
+      "shortName": "SEAT",
+      "totalCount": 568,
+      "sublevels": 1,
+      "enemyCount": 23,
+      "cloneCount": 186
+    },
+    {
+      "idx": 151,
+      "slug": "skyreach",
+      "name": "Skyreach",
+      "shortName": "SKY",
+      "totalCount": 431,
+      "sublevels": 1,
+      "enemyCount": 22,
+      "cloneCount": 102
+    },
+    {
+      "idx": 20,
+      "slug": "temple-of-sethraliss",
+      "name": "Temple of Sethraliss",
+      "shortName": "TOS",
+      "totalCount": 687,
+      "sublevels": 1,
+      "enemyCount": 45,
+      "cloneCount": 128
+    },
+    {
+      "idx": 162,
+      "slug": "the-blinding-vale",
+      "name": "The Blinding Vale",
+      "shortName": "VALE",
+      "totalCount": 686,
+      "sublevels": 1,
+      "enemyCount": 26,
+      "cloneCount": 277
+    },
+    {
+      "idx": 163,
+      "slug": "voidscar-arena",
+      "name": "Voidscar Arena",
+      "shortName": "VOID",
+      "totalCount": 738,
+      "sublevels": 1,
+      "enemyCount": 32,
+      "cloneCount": 213
+    },
+    {
+      "idx": 152,
+      "slug": "windrunner-spire",
+      "name": "Windrunner Spire",
+      "shortName": "SPIRE",
+      "totalCount": 591,
+      "sublevels": 1,
+      "enemyCount": 30,
+      "cloneCount": 212
+    }
+  ]
+}

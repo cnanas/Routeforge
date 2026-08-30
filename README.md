@@ -25,24 +25,32 @@ reads it back.
   MDT flags them: interruptible, magic, enrage, bleed, poison, curse, disease.
 - **Import / export** to MDT route strings, and a local route library.
 
-## Setting up the data
+## Running it
 
-The map tiles, enemy data, portraits and spell icons are **not** committed.
-They are Blizzard's art and MDT's dungeon data, so they are generated from your
-own installations rather than redistributed here.
-
-You need World of Warcraft with the Mythic Dungeon Tools addon installed.
+The generated game data and art under `public/` are committed, so a clone runs
+without World of Warcraft installed:
 
 ```bash
 npm install
-npm run data     # extract dungeons from the addon, then fetch spell/icon data
 npm run dev
 ```
 
-`npm run data` runs two steps:
+## Refreshing the data
 
-- `tools/extract.mjs` executes MDT's Lua dungeon files in a WASM Lua VM and
-  writes `public/data/`, then copies the addon's map tiles.
+`npm run data` rebuilds `public/` from a local WoW install with the Mythic
+Dungeon Tools addon. Re-run it after an MDT update to pick up new dungeons or
+rebalanced enemy forces.
+
+```bash
+npm run data
+```
+
+It runs these steps:
+
+- `tools/extract.mjs` executes MDT's Lua dungeon files in a WASM Lua VM, writes
+  `public/data/`, and copies the addon's map tiles.
+- `tools/portraits.mjs` and `tools/marker-icons.mjs` fetch creature portraits
+  and route-marker icons.
 - `tools/spells.mjs` fetches spell names, icons and descriptions.
 
 If WoW lives somewhere non-standard, point at it:
@@ -51,8 +59,8 @@ If WoW lives somewhere non-standard, point at it:
 MDT_PATH="/path/to/_retail_/Interface/AddOns/MythicDungeonTools" npm run data
 ```
 
-Re-run `npm run data` after MDT updates to pick up new dungeons or rebalanced
-enemy forces.
+If `public/data/` is missing, the app renders setup instructions instead of
+failing the build, so a data-less deploy is obvious rather than cryptic.
 
 > The tile copy step assumes MDT's current layout
 > (`Midnight/Textures/<Dungeon>/`). See `tools/extract.mjs` if that moves.
@@ -85,10 +93,17 @@ Deflate is not canonical, so our compressed bytes differ from the game's while
 the CBOR payload underneath is byte-identical. Unmodelled preset fields are
 carried through untouched, so re-exporting an imported route loses nothing.
 
+## Deploying
+
+`public/` is committed, so any static-friendly host builds this as-is — there
+is no build-time dependency on a game install.
+
 ## Licence
 
 GPL-2.0-or-later, because it builds on MDT's GPL-2.0 dungeon data. See
 [LICENSE](LICENSE).
 
-Unofficial fan project — not affiliated with Blizzard Entertainment or the MDT
-authors.
+Unofficial, non-commercial fan project — not affiliated with Blizzard
+Entertainment or the MDT authors. Game art under `public/` belongs to
+Blizzard Entertainment and is included only so the app can be built and
+hosted.

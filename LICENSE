@@ -19,8 +19,17 @@ this program; if not, see <https://www.gnu.org/licenses/>.
 
 ---
 
-Routeforge is an unofficial fan project. It is not affiliated with, endorsed
-by, or associated with Blizzard Entertainment or the authors of Mythic Dungeon
-Tools. World of Warcraft and all related assets are trademarks of Blizzard
-Entertainment, Inc. Game art referenced by this tool is not redistributed with
-it; it is read from the user's own game installation at setup time.
+Routeforge is an unofficial, non-commercial fan project. It is not affiliated
+with, endorsed by, or associated with Blizzard Entertainment or the authors of
+Mythic Dungeon Tools.
+
+World of Warcraft, and all game art, dungeon maps, creature portraits, spell
+icons and related material, are the property and trademarks of Blizzard
+Entertainment, Inc. Copies of that material included under public/ are
+redistributed here only so the application can be built and hosted, under
+Blizzard's fan-content allowances for non-commercial fan projects. No
+ownership is claimed over any of it, and it will be removed on request.
+
+Dungeon data under public/data/ is derived from Mythic Dungeon Tools, which is
+licensed GPL-2.0; that derivation is why this project carries the same
+licence.
