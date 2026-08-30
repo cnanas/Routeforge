@@ -93,7 +93,7 @@ export default function DungeonMap(props: Props) {
       zoomControl: false,
       maxBoundsViscosity: 0.7,
     })
-    L.control.zoom({ position: 'bottomright' }).addTo(map)
+    L.control.zoom({ position: 'topright' }).addTo(map)
     map.fitBounds(MAP_BOUNDS)
     map.setMaxBounds(L.latLngBounds(MAP_BOUNDS).pad(0.25))
 

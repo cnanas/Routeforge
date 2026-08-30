@@ -28,16 +28,31 @@ html, body {
 }
 
 .shell {
-  /* Route on the left where the work happens, map centre, mob detail right.
+  /* One sidebar: the route on top, whatever mob you're looking at beneath it.
      The dungeon list is a popover off the map, not a permanent column. */
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: 1fr auto;
   height: 100dvh;
 }
 
-.route-panel { grid-column: 1; grid-row: 1; border-left: 0; border-right: 1px solid var(--line); }
-.stage { grid-column: 2; grid-row: 1; }
-.inspector { grid-column: 3; grid-row: 1; border-left: 1px solid var(--line); border-right: 0; border-top: 0; }
+.route-panel {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  border-left: 0;
+  border-right: 1px solid var(--line);
+}
+
+.inspector {
+  grid-column: 1;
+  grid-row: 2;
+  max-height: 46dvh;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+
+.stage { grid-column: 2; grid-row: 1 / 3; }
 
 /* ---- dungeon picker ---- */
 
@@ -72,7 +87,7 @@ html, body {
   position: absolute;
   z-index: 700;
   top: 56px;
-  left: 312px;
+  left: 332px;
   display: none;
   flex-direction: column;
   width: 320px;
@@ -378,7 +393,7 @@ html, body {
 .toolbar {
   position: absolute;
   z-index: 500;
-  top: 12px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1402,7 +1417,7 @@ html, body {
 
   /* Keep the map clear of the bars. */
   .floors { top: calc(60px + env(safe-area-inset-top)); }
-  .leaflet-bottom.leaflet-right { bottom: 78px; }
+  .leaflet-top.leaflet-right { top: calc(56px + env(safe-area-inset-top)); }
 
   .modal { width: 100%; }
   .modal textarea { height: 130px; }
