@@ -1,0 +1,18 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+.env*
+!.env.example
+
+# Generated game assets — see README "Setting up the data".
+# These are extracted from a local WoW install (Blizzard art, and dungeon data
+# from a GPL-2.0 addon), so they are rebuilt with `npm run data` rather than
+# redistributed here.
+/public/tiles/
+/public/portraits/
+/public/spells/
+/public/markers/
+/public/data/

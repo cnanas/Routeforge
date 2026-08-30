@@ -1,0 +1,26 @@
+Routeforge
+Copyright (C) 2026 Christian Nanas
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+Routeforge reads dungeon data and map tiles produced by Mythic Dungeon Tools
+(https://github.com/Nnoggie/MythicDungeonTools), which is licensed GPL-2.0.
+That is why this project carries the same licence.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, see <https://www.gnu.org/licenses/>.
+
+---
+
+Routeforge is an unofficial fan project. It is not affiliated with, endorsed
+by, or associated with Blizzard Entertainment or the authors of Mythic Dungeon
+Tools. World of Warcraft and all related assets are trademarks of Blizzard
+Entertainment, Inc. Game art referenced by this tool is not redistributed with
+it; it is read from the user's own game installation at setup time.
