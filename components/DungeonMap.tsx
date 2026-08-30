@@ -26,7 +26,16 @@ const BOSS_BLIP_MULT = 1.7
 /** Names come from game data, so escape before putting them in divIcon HTML. */
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`)
 
-export type Tool = 'select' | 'pen' | 'line' | 'arrow' | 'note' | 'eraser' | `marker:${string}`
+export type Tool =
+  /** Tap/click a mob to read its abilities without touching the route. */
+  | 'inspect'
+  | 'select'
+  | 'pen'
+  | 'line'
+  | 'arrow'
+  | 'note'
+  | 'eraser'
+  | `marker:${string}`
 
 interface Props {
   dungeon: Dungeon
@@ -172,6 +181,12 @@ export default function DungeonMap(props: Props) {
         marker.on('click', (ev: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(ev)
           const t = cb.current.tool
+          // Touch has no hover, so a tap is the only way to inspect a mob.
+          // Inspect mode makes that explicit instead of editing the route.
+          if (t === 'inspect') {
+            cb.current.onHover?.(enemy)
+            return
+          }
           if (t !== 'select' && t !== 'eraser') return
           // Alt-click isolates one spawn; a plain click takes the whole pack,
           // because that's how the group actually aggros.

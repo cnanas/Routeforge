@@ -30,8 +30,20 @@ html, body {
 .shell {
   display: grid;
   grid-template-columns: 288px 1fr 300px;
+  grid-template-rows: 1fr auto;
   height: 100dvh;
 }
+
+.sidebar { grid-column: 1; grid-row: 1; }
+.inspector { grid-column: 1; grid-row: 2; }
+.stage { grid-column: 2; grid-row: 1 / 3; }
+.route-panel { grid-column: 3; grid-row: 1 / 3; }
+
+/* Mobile-only chrome; the media query below turns these on. */
+.mbar,
+.mfoot,
+.sheet-backdrop,
+.sheet-close { display: none; }
 
 /* ---------- sidebar ---------- */
 
@@ -163,19 +175,23 @@ html, body {
 
 /* ---------- info panel ---------- */
 
-.panel {
+.inspector {
   padding: 14px 16px;
   border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
   background: var(--panel-2);
   min-height: 195px;
+  overflow-y: auto;
 }
 
-.panel h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; }
+.inspector-head { display: none; }
 
-.panel dl { display: grid; gap: 5px; margin: 0; }
-.panel dl > div { display: flex; justify-content: space-between; gap: 12px; }
-.panel dt { color: var(--muted); font-size: 12px; }
-.panel dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.inspector h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; }
+
+.inspector dl { display: grid; gap: 5px; margin: 0; }
+.inspector dl > div { display: flex; justify-content: space-between; gap: 12px; }
+.inspector dt { color: var(--muted); font-size: 12px; }
+.inspector dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
 
 .pct {
   margin-left: 8px;
@@ -317,7 +333,7 @@ html, body {
   .sidebar--open .dungeon-list { display: block; }
 
   .panel { min-height: 0; padding: 10px 16px; }
-  .panel dl { grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  .inspector dl { grid-template-columns: 1fr 1fr; gap: 4px 16px; }
   .hint { display: none; }
 }
 
@@ -769,34 +785,6 @@ html, body {
 
 /* ---------- mobile ---------- */
 
-@media (max-width: 1100px) {
-  .shell { grid-template-columns: 260px 1fr 260px; }
-  .toolbar { max-width: calc(100% - 16px); }
-}
-
-@media (max-width: 860px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
-  .route-panel { border-left: 0; border-top: 1px solid var(--line); max-height: 40dvh; }
-  .toolbar { top: auto; bottom: 12px; }
-  .nav-toggle { display: block; }
-  .dungeon-list { display: none; max-height: 45dvh; }
-  .sidebar--open .dungeon-list { display: block; }
-  .panel { min-height: 0; padding: 10px 16px; }
-  .panel dl { grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-  .hint { display: none; }
-}
-
-.route-actions button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.route-actions button:disabled:hover {
-  border-color: var(--line);
-  background: var(--panel-2);
-}
-
 /* ---------- pull outlines ---------- */
 
 .pull-outline { pointer-events: none; }
@@ -1096,3 +1084,266 @@ html, body {
 }
 
 .panel-clear:hover { border-color: var(--accent); color: var(--text); }
+
+/* =========================================================================
+   Mobile
+   The map is the whole screen; every panel becomes a bottom sheet raised by
+   [data-sheet] on the shell. Panels are reused rather than duplicated, so
+   there is one implementation of the dungeon list, inspector and pull list.
+   ========================================================================= */
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 264px 1fr 272px; }
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  .stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .mbar,
+  .mfoot,
+  .sheet-close { display: flex; }
+
+  /* ---- sheets ---- */
+
+  .sidebar,
+  .inspector,
+  .route-panel,
+  .toolbar {
+    position: fixed;
+    z-index: 900;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    max-height: min(72dvh, 560px);
+    padding-bottom: env(safe-area-inset-bottom);
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 14px 14px 0 0;
+    background: var(--panel);
+    box-shadow: 0 -6px 28px rgba(35, 32, 26, 0.28);
+    transform: translateY(110%);
+    transition: transform 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .shell[data-sheet='dungeons'] .sidebar,
+  .shell[data-sheet='enemy'] .inspector,
+  .shell[data-sheet='route'] .route-panel,
+  .shell[data-sheet='tools'] .toolbar { transform: none; }
+
+  .sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 890;
+    background: rgba(35, 32, 26, 0.35);
+  }
+
+  /* A grab handle so a sheet reads as one. */
+  .sidebar::before,
+  .inspector::before,
+  .route-panel::before,
+  .toolbar::before {
+    content: '';
+    position: sticky;
+    top: 6px;
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 6px auto 2px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  .sheet-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .inspector-head { display: block; height: 8px; }
+
+  /* ---- top bar ---- */
+
+  .mbar {
+    position: fixed;
+    z-index: 800;
+    top: 0;
+    left: 0;
+    right: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top));
+    border-bottom: 1px solid var(--line);
+    background: rgba(251, 250, 247, 0.94);
+    backdrop-filter: blur(8px);
+  }
+
+  .mbar button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .mbar-dungeon { flex: none; font-weight: 700; }
+  .mbar-dungeon i { color: var(--muted); font-style: normal; font-size: 10px; }
+
+  .mbar-route { flex: 1; min-width: 0; justify-content: space-between; }
+  .mbar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .mbar-pct {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- bottom bar + FAB ---- */
+
+  .mfoot {
+    position: fixed;
+    z-index: 800;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+
+  .mfoot-pull,
+  .fab { pointer-events: auto; }
+
+  .mfoot-pull {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 7px 12px 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(251, 250, 247, 0.96);
+    backdrop-filter: blur(8px);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    box-shadow: 0 3px 14px rgba(35, 32, 26, 0.2);
+    cursor: pointer;
+  }
+
+  .mfoot-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .mfoot-meta b { font-size: 12.5px; font-weight: 650; }
+  .mfoot-meta span { color: var(--muted); font-size: 11px; }
+
+  .fab {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    box-shadow: 0 4px 16px rgba(168, 106, 31, 0.45);
+    cursor: pointer;
+  }
+
+  .fab:active { transform: scale(0.95); }
+
+  /* ---- sheet contents ---- */
+
+  .brand { padding: 4px 16px 12px; }
+  .seasons { padding: 0 12px; }
+  .season { padding: 11px 4px 12px; font-size: 13px; }
+
+  .dungeon-list { max-height: none; overflow: visible; padding: 8px 10px 16px; }
+  .dungeon { grid-template-columns: 58px 1fr auto; min-height: 48px; }
+
+  .inspector { padding: 6px 16px 20px; border: 0; min-height: 0; }
+  .spells { max-height: none; overflow: visible; }
+
+  .route-panel { display: block; }
+  .route-head { padding: 6px 14px 12px; }
+  .route-actions button { min-height: 40px; flex: 1 1 30%; }
+  .pulls { max-height: none; overflow: visible; padding: 0 10px 16px; }
+  .pull { min-height: 52px; }
+  .pull-buttons button { width: 36px; height: 36px; font-size: 14px; }
+  .add-pull { min-height: 48px; }
+
+  /* The toolbar stops being a floating strip and becomes a real sheet. */
+  .toolbar {
+    top: auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px 20px;
+    backdrop-filter: none;
+    overflow-x: visible;
+  }
+
+  .tool { width: 46px; height: 46px; font-size: 19px; }
+  .tool-sep { width: 100%; height: 1px; margin: 2px 0; }
+  .swatch { width: 34px; height: 34px; }
+  .markers { flex-wrap: wrap; gap: 8px; width: 100%; }
+  .marker-group { flex-wrap: wrap; gap: 6px; padding-right: 0; border-right: 0; }
+  .marker-btn { width: 42px; height: 42px; padding: 3px; }
+  .marker-shape { font-size: 22px; }
+
+  /* Keep the map clear of the bars. */
+  .floors { top: calc(60px + env(safe-area-inset-top)); }
+  .leaflet-bottom.leaflet-right { bottom: 78px; }
+
+  .modal { width: 100%; }
+  .modal textarea { height: 130px; }
+  .modal-actions button { min-height: 44px; flex: 1; }
+  .library { max-height: 50dvh; }
+  .hint { display: block; }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .inspector,
+  .route-panel,
+  .toolbar { transition: none; }
+}

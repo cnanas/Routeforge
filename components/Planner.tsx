@@ -23,6 +23,7 @@ const DungeonMap = dynamic(() => import('./DungeonMap'), {
 const ALL = '__all__'
 
 const TOOLS: { id: Tool; label: string; glyph: string }[] = [
+  { id: 'inspect', label: 'Inspect a mob', glyph: '◉' },
   { id: 'select', label: 'Select packs', glyph: '⬚' },
   { id: 'pen', label: 'Freehand', glyph: '✎' },
   { id: 'line', label: 'Line', glyph: '╱' },
@@ -65,6 +66,12 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   const setRoute = useCallback((r: Route) => dispatch({ type: 'replace', route: r }), [])
   const [currentPull, setCurrentPull] = useState(0)
   const [tool, setTool] = useState<Tool>('select')
+
+  // Touch devices start in inspect mode: without hover, a tap is the only way
+  // to read a mob, and defaulting to select would edit the route by accident.
+  useEffect(() => {
+    if (window.matchMedia?.('(pointer: coarse)').matches) setTool('inspect')
+  }, [])
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0])
   /*
    * The inspected mob persists after the pointer leaves the map. Clearing on
@@ -73,7 +80,8 @@ export default function Planner({ index }: { index: DungeonIndex }) {
    * pulls, so hover sets and an explicit × clears.
    */
   const [inspected, setInspected] = useState<Enemy | null>(null)
-  const [navOpen, setNavOpen] = useState(false)
+  /** Which panel is raised as a bottom sheet on mobile. Unused on desktop. */
+  const [sheet, setSheet] = useState<'dungeons' | 'route' | 'tools' | 'enemy' | null>(null)
   const [dialog, setDialog] = useState<'import' | 'export' | 'library' | null>(null)
   const [showOutlines, setShowOutlines] = useState(true)
   const [spells, setSpells] = useState<Record<string, SpellInfo>>({})
@@ -281,17 +289,15 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   const pulls = route.pulls
 
   return (
-    <div className="shell">
+    <div className="shell" data-sheet={sheet ?? undefined}>
       {/* ---------- dungeons ---------- */}
-      <aside className={navOpen ? 'sidebar sidebar--open' : 'sidebar'}>
+      <aside className="sidebar">
         <header className="brand">
           <h1>
             <Logo />
             Routeforge
           </h1>
-          <button className="nav-toggle" onClick={() => setNavOpen((v) => !v)}>
-            {navOpen ? 'Close' : 'Dungeons'}
-          </button>
+          <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
         </header>
 
         {seasons.length > 0 && (
@@ -326,7 +332,7 @@ export default function Planner({ index }: { index: DungeonIndex }) {
               className={d.slug === slug ? 'dungeon dungeon--active' : 'dungeon'}
               onClick={() => {
                 setSlug(d.slug)
-                setNavOpen(false)
+                setSheet(null)
               }}
             >
               <span className="tag">{d.shortName}</span>
@@ -336,7 +342,12 @@ export default function Planner({ index }: { index: DungeonIndex }) {
           ))}
         </nav>
 
-        <div className="panel">
+      </aside>
+
+      <section className="inspector">
+        <div className="inspector-head">
+          <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
+        </div>
           {inspected ? (
             <>
               <h2 className="panel-title">
@@ -410,12 +421,12 @@ export default function Planner({ index }: { index: DungeonIndex }) {
               </>
             )
           )}
-        </div>
-      </aside>
+        </section>
 
       {/* ---------- map ---------- */}
       <main className="stage">
         <div className="toolbar">
+          <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
           {TOOLS.map((t) => (
             <button
               key={t.id}
@@ -486,7 +497,12 @@ export default function Planner({ index }: { index: DungeonIndex }) {
             showOutlines={showOutlines}
             tool={tool}
             drawColor={drawColor}
-            onHover={(e) => e && setInspected(e)}
+            onHover={(e) => {
+              if (!e) return
+              setInspected(e)
+              // On mobile the inspector is a sheet, so surface it on tap.
+              if (window.matchMedia?.('(max-width: 860px)').matches) setSheet('enemy')
+            }}
             onToggleEnemy={toggleEnemy}
             onAddObject={addObject}
             onEraseObject={eraseObject}
@@ -500,6 +516,7 @@ export default function Planner({ index }: { index: DungeonIndex }) {
       {/* ---------- route ---------- */}
       <aside className="route-panel">
         <div className="route-head">
+          <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
           <input
             className="route-name"
             value={route.name}
@@ -570,6 +587,40 @@ export default function Planner({ index }: { index: DungeonIndex }) {
           <button className="add-pull" onClick={addPull}>+ Add pull</button>
         </div>
       </aside>
+
+      {/* ---------- mobile chrome (hidden on desktop) ---------- */}
+      <header className="mbar">
+        <button className="mbar-dungeon" onClick={() => setSheet('dungeons')}>
+          <Logo size={18} />
+          <span>{dungeon?.shortName ?? '—'}</span>
+          <i aria-hidden>▾</i>
+        </button>
+        <button className="mbar-route" onClick={() => setSheet('route')}>
+          <span className="mbar-name">{route.name}</span>
+          <span className="mbar-pct">{totalPct.toFixed(0)}%</span>
+        </button>
+      </header>
+
+      <div className="mfoot">
+        <button className="mfoot-pull" onClick={() => setSheet('route')}>
+          <span className="pull-swatch" style={{ background: `#${pulls[currentPull]?.color ?? '888'}` }}>
+            {currentPull + 1}
+          </span>
+          <span className="mfoot-meta">
+            <b>Pull {currentPull + 1} of {pulls.length}</b>
+            <span>{(forces[currentPull]?.cumulativePct ?? 0).toFixed(1)}% by here</span>
+          </span>
+        </button>
+        <button
+          className="fab"
+          onClick={() => setSheet((v) => (v === 'tools' ? null : 'tools'))}
+          aria-label="Tools"
+        >
+          {tool === 'inspect' ? '◉' : TOOLS.find((t) => t.id === tool)?.glyph ?? '✎'}
+        </button>
+      </div>
+
+      {sheet && <div className="sheet-backdrop" onClick={() => setSheet(null)} />}
 
       {/* ---------- dialogs ---------- */}
       {dialog && (
