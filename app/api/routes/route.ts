@@ -30,6 +30,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'That route is too large to share.' }, { status: 413 })
   }
 
+  // Counted before decoding, so a flood of junk still consumes the caller's
+  // allowance rather than being free to send.
+  if (!(await allow(sql, clientKey(req, 'share')))) {
+    return NextResponse.json(
+      { error: 'Too many routes shared from here recently. Try again later.' },
+      { status: 429 }
+    )
+  }
+
   // Validate by decoding: never store a string the app can't read back.
   let dungeonIdx: number
   try {
@@ -40,13 +49,6 @@ export async function POST(req: Request) {
     dungeonIdx = idx
   } catch {
     return NextResponse.json({ error: 'That does not decode as a route.' }, { status: 400 })
-  }
-
-  if (!(await allow(sql, clientKey(req, 'share')))) {
-    return NextResponse.json(
-      { error: 'Too many routes shared from here recently. Try again later.' },
-      { status: 429 }
-    )
   }
 
   const name = String(body.name ?? 'Untitled route').slice(0, MAX_NAME) || 'Untitled route'
