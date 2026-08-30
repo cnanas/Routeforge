@@ -66,12 +66,6 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   const setRoute = useCallback((r: Route) => dispatch({ type: 'replace', route: r }), [])
   const [currentPull, setCurrentPull] = useState(0)
   const [tool, setTool] = useState<Tool>('select')
-
-  // Touch devices start in inspect mode: without hover, a tap is the only way
-  // to read a mob, and defaulting to select would edit the route by accident.
-  useEffect(() => {
-    if (window.matchMedia?.('(pointer: coarse)').matches) setTool('inspect')
-  }, [])
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0])
   /*
    * The inspected mob persists after the pointer leaves the map. Clearing on
@@ -291,7 +285,7 @@ export default function Planner({ index }: { index: DungeonIndex }) {
   return (
     <div className="shell" data-sheet={sheet ?? undefined}>
       {/* ---------- dungeons ---------- */}
-      <aside className="sidebar">
+      <aside className={sheet === 'dungeons' ? 'sidebar sidebar--open' : 'sidebar'}>
         <header className="brand">
           <h1>
             <Logo />
@@ -348,6 +342,7 @@ export default function Planner({ index }: { index: DungeonIndex }) {
         <div className="inspector-head">
           <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
         </div>
+        <div className="inspector-body">
           {inspected ? (
             <>
               <h2 className="panel-title">
@@ -421,10 +416,21 @@ export default function Planner({ index }: { index: DungeonIndex }) {
               </>
             )
           )}
-        </section>
+        </div>
+      </section>
 
       {/* ---------- map ---------- */}
       <main className="stage">
+        <button
+          className="dungeon-picker"
+          onClick={() => setSheet((v) => (v === 'dungeons' ? null : 'dungeons'))}
+          aria-expanded={sheet === 'dungeons'}
+        >
+          <span className="tag">{dungeon?.shortName ?? '—'}</span>
+          <span className="dungeon-picker-name">{dungeon?.name ?? 'Choose a dungeon'}</span>
+          <i aria-hidden>▾</i>
+        </button>
+
         <div className="toolbar">
           <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
           {TOOLS.map((t) => (
@@ -497,10 +503,10 @@ export default function Planner({ index }: { index: DungeonIndex }) {
             showOutlines={showOutlines}
             tool={tool}
             drawColor={drawColor}
-            onHover={(e) => {
-              if (!e) return
+            onHover={(e) => e && setInspected(e)}
+            onInspect={(e) => {
               setInspected(e)
-              // On mobile the inspector is a sheet, so surface it on tap.
+              // The inspector is a sheet on mobile, so surface it deliberately.
               if (window.matchMedia?.('(max-width: 860px)').matches) setSheet('enemy')
             }}
             onToggleEnemy={toggleEnemy}

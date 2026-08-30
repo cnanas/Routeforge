@@ -17,6 +17,9 @@ const MdtTileLayer = L.TileLayer.extend({
   },
 })
 
+/** Hold this long on a mob to inspect it rather than pull it. */
+const LONG_PRESS_MS = 450
+
 /** Blip diameter in map units for an enemy of scale 1, matched to MDT's sizing. */
 const BASE_BLIP = 26
 
@@ -45,7 +48,10 @@ interface Props {
   showOutlines: boolean
   tool: Tool
   drawColor: string
+  /** Pointer entered/left a mob (desktop hover). */
   onHover?: (enemy: Enemy | null) => void
+  /** Deliberate request to inspect: long press, or the inspect tool. */
+  onInspect: (enemy: Enemy) => void
   onToggleEnemy: (enemyIdx: number, cloneIdx: number, wholePack: boolean) => void
   onAddObject: (obj: RouteObject) => void
   onEraseObject: (id: string) => void
@@ -159,6 +165,9 @@ export default function DungeonMap(props: Props) {
         }).addTo(layers)
 
         const el = marker.getElement()
+        // Touch has no hover, and a tap has to stay free for building the
+        // route, so holding a mob inspects it instead.
+        let longPressed = false
         if (el) {
           const key = `${enemy.mdtIdx}:${clone.mdtIdx}`
           blips.set(key, { el, enemyIdx: enemy.mdtIdx, cloneIdx: clone.mdtIdx })
@@ -167,6 +176,31 @@ export default function DungeonMap(props: Props) {
             if (list) list.push(el)
             else packs.set(clone.g, [el])
           }
+
+          let timer: number | null = null
+          let from: { x: number; y: number } | null = null
+          const cancel = () => {
+            if (timer !== null) window.clearTimeout(timer)
+            timer = null
+            from = null
+          }
+          el.addEventListener('pointerdown', (ev: PointerEvent) => {
+            if (ev.pointerType === 'mouse') return
+            longPressed = false
+            from = { x: ev.clientX, y: ev.clientY }
+            timer = window.setTimeout(() => {
+              longPressed = true
+              cb.current.onInspect(enemy)
+              navigator.vibrate?.(12)
+            }, LONG_PRESS_MS)
+          })
+          // A drag is a pan, not a hold.
+          el.addEventListener('pointermove', (ev: PointerEvent) => {
+            if (!from) return
+            if (Math.hypot(ev.clientX - from.x, ev.clientY - from.y) > 10) cancel()
+          })
+          el.addEventListener('pointerup', cancel)
+          el.addEventListener('pointercancel', cancel)
         }
 
         const group = () => (clone.g != null ? packs.get(clone.g) ?? [] : el ? [el] : [])
@@ -180,11 +214,14 @@ export default function DungeonMap(props: Props) {
         })
         marker.on('click', (ev: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(ev)
+          // A long press already inspected; swallow the click it emits after.
+          if (longPressed) {
+            longPressed = false
+            return
+          }
           const t = cb.current.tool
-          // Touch has no hover, so a tap is the only way to inspect a mob.
-          // Inspect mode makes that explicit instead of editing the route.
           if (t === 'inspect') {
-            cb.current.onHover?.(enemy)
+            cb.current.onInspect(enemy)
             return
           }
           if (t !== 'select' && t !== 'eraser') return
