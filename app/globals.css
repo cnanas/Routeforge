@@ -1493,3 +1493,38 @@ html, body {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ---------- a logged run, loaded over the plan ---------- */
+
+.run-title { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+.run-badge {
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.run-badge--timed { background: #dff2df; color: #1d6b1d; }
+.run-badge--depleted { background: #f7dede; color: #a12626; }
+
+.run-facts {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-over { color: #a12626; }
+
+.run-compare {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.run-compare b { color: var(--accent); }
+.run-compare--muted { font-style: italic; }

@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx tools/test-codec.ts && tsx tools/test-route.ts && tsx tools/test-real-string.ts && tsx tools/test-history.ts && tsx tools/test-hull.ts && tsx tools/test-share.ts && node tools/verify-indices.mjs",
+    "test": "tsx tools/test-codec.ts && tsx tools/test-route.ts && tsx tools/test-real-string.ts && tsx tools/test-history.ts && tsx tools/test-hull.ts && tsx tools/test-share.ts && tsx tools/test-run.ts && node tools/verify-indices.mjs",
     "data": "node tools/extract.mjs && node tools/portraits.mjs && node tools/marker-icons.mjs && node tools/spells.mjs",
     "db:setup": "node --env-file-if-exists=.env.local tools/db-setup.mjs"
   },

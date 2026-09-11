@@ -11,6 +11,8 @@ import {
 import { decodeMdtString, encodeMdtString } from '@/lib/mdt-string'
 import { MARKERS, GROUP_LABELS, markerById } from '@/lib/markers'
 import { listRoutes, saveRoute, deleteRoute, type StoredRoute } from '@/lib/storage'
+import { parseRun, runToRoute, type KeystoneRun, type RunRoute } from '@/lib/run'
+import RunPanel from './RunPanel'
 import { historyReducer, initHistory } from '@/lib/history'
 import Logo from './Logo'
 
@@ -82,7 +84,10 @@ export default function Planner({ index, shared }: PlannerProps) {
   const [inspected, setInspected] = useState<Enemy | null>(null)
   /** Which panel is raised as a bottom sheet on mobile. Unused on desktop. */
   const [sheet, setSheet] = useState<'dungeons' | 'route' | 'tools' | 'enemy' | null>(null)
-  const [dialog, setDialog] = useState<'import' | 'export' | 'library' | 'share' | null>(null)
+  const [dialog, setDialog] = useState<'import' | 'export' | 'library' | 'share' | 'run' | null>(null)
+  // A logged run, once one is loaded: the pulls that actually happened.
+  const [loadedRun, setLoadedRun] = useState<{ run: KeystoneRun; imported: RunRoute } | null>(null)
+  const [runError, setRunError] = useState<string | null>(null)
   const [showOutlines, setShowOutlines] = useState(true)
   const [spells, setSpells] = useState<Record<string, SpellInfo>>({})
   const [saved, setSaved] = useState<StoredRoute[]>([])
@@ -575,7 +580,7 @@ export default function Planner({ index, shared }: PlannerProps) {
           <DungeonMap
             dungeon={dungeon}
             sublevel={route.sublevel}
-            route={route}
+            route={loadedRun ? loadedRun.imported.route : route}
             currentPull={currentPull}
             showOutlines={showOutlines}
             tool={tool}
@@ -598,6 +603,17 @@ export default function Planner({ index, shared }: PlannerProps) {
 
       {/* ---------- route ---------- */}
       <aside className="route-panel">
+        {loadedRun && dungeon ? (
+          <RunPanel
+            run={loadedRun.run}
+            imported={loadedRun.imported}
+            planned={route}
+            currentPull={currentPull}
+            onSelectPull={setCurrentPull}
+            onClear={() => { setLoadedRun(null); setCurrentPull(0) }}
+          />
+        ) : (
+        <>
         <div className="route-head">
           <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close">×</button>
           <input
@@ -623,6 +639,9 @@ export default function Planner({ index, shared }: PlannerProps) {
               title="Show an outline around each pull"
             >
               ◌ Outlines
+            </button>
+            <button onClick={() => { setRunError(null); setDialog('run') }} title="Load a run logged by Keystone">
+              Run
             </button>
             <button onClick={() => setDialog('import')}>Import</button>
             <button onClick={() => setDialog('export')}>Export</button>
@@ -672,6 +691,8 @@ export default function Planner({ index, shared }: PlannerProps) {
           })}
           <button className="add-pull" onClick={addPull}>+ Add pull</button>
         </div>
+        </>
+        )}
       </aside>
 
       {/* ---------- mobile chrome (hidden on desktop) ---------- */}
@@ -712,6 +733,45 @@ export default function Planner({ index, shared }: PlannerProps) {
       {dialog && (
         <div className="overlay" onClick={() => setDialog(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
+            {dialog === 'run' && (
+              <>
+                <h2>Load a logged run</h2>
+                <p className="modal-hint">
+                  Keystone reads WoW&apos;s combat log and exports a run as JSON
+                  (<code>npm run export-run</code>). Drop that file here to see the pulls that
+                  actually happened, laid over this route.
+                </p>
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file || !dungeon) return
+                    try {
+                      const parsed = parseRun(await file.text())
+                      if (parsed.run.challengeModeId !== dungeon.mapID) {
+                        setRunError(
+                          `That run is ${parsed.run.dungeon}, but ${dungeon.name} is open. ` +
+                          'Switch dungeon and try again.'
+                        )
+                        return
+                      }
+                      setLoadedRun({ run: parsed, imported: runToRoute(parsed, dungeon) })
+                      setCurrentPull(0)
+                      setRunError(null)
+                      setDialog(null)
+                    } catch (err) {
+                      setRunError(err instanceof Error ? err.message : 'Could not read that file.')
+                    }
+                  }}
+                />
+                {runError && <p className="modal-error">{runError}</p>}
+                <div className="modal-actions">
+                  <button onClick={() => setDialog(null)}>Cancel</button>
+                </div>
+              </>
+            )}
+
             {dialog === 'import' && (
               <>
                 <h2>Import an MDT route</h2>
