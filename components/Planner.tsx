@@ -88,6 +88,8 @@ export default function Planner({ index, shared }: PlannerProps) {
   // A logged run, once one is loaded: the pulls that actually happened.
   const [loadedRun, setLoadedRun] = useState<{ run: KeystoneRun; imported: RunRoute } | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
+  // A run for a dungeon that isn't open yet: held until that dungeon loads.
+  const [pendingRun, setPendingRun] = useState<KeystoneRun | null>(null)
   const [showOutlines, setShowOutlines] = useState(true)
   const [spells, setSpells] = useState<Record<string, SpellInfo>>({})
   const [saved, setSaved] = useState<StoredRoute[]>([])
@@ -98,6 +100,27 @@ export default function Planner({ index, shared }: PlannerProps) {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => setSaved(listRoutes()), [])
+
+  // A run names its dungeon; the index keys on slug. Short names disagree
+  // between sources (Raider.IO "MR" vs MDT "MURD") and so do apostrophes, so
+  // match on the name with everything but letters and digits stripped out.
+  const dungeonForRun = useCallback(
+    (run: KeystoneRun) => {
+      const flat = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const wanted = flat(run.run.dungeon ?? '')
+      return index.dungeons.find((d) => flat(d.name) === wanted)
+    },
+    [index]
+  )
+
+  // Once the dungeon a held run belongs to has loaded, apply it.
+  useEffect(() => {
+    if (!pendingRun || !dungeon) return
+    if (dungeon.mapID !== pendingRun.run.challengeModeId) return
+    setLoadedRun({ run: pendingRun, imported: runToRoute(pendingRun, dungeon) })
+    setPendingRun(null)
+    setCurrentPull(0)
+  }, [pendingRun, dungeon])
 
   // A shared link arrives as an MDT string, so it decodes through exactly the
   // same path as a route pasted out of the game.
@@ -738,8 +761,10 @@ export default function Planner({ index, shared }: PlannerProps) {
                 <h2>Load a logged run</h2>
                 <p className="modal-hint">
                   Keystone reads WoW&apos;s combat log and exports a run as JSON
-                  (<code>npm run export-run</code>). Drop that file here to see the pulls that
-                  actually happened, laid over this route.
+                  (<code>npm run export-run</code>), which lands in{' '}
+                  <code>~/Developer/keystone/build/runs/</code>. Pick one to see the pulls that
+                  actually happened, laid over this route — if it&apos;s for another dungeon, this
+                  switches to it.
                 </p>
                 <input
                   type="file"
@@ -749,15 +774,26 @@ export default function Planner({ index, shared }: PlannerProps) {
                     if (!file || !dungeon) return
                     try {
                       const parsed = parseRun(await file.text())
-                      if (parsed.run.challengeModeId !== dungeon.mapID) {
+
+                      if (parsed.run.challengeModeId === dungeon.mapID) {
+                        setLoadedRun({ run: parsed, imported: runToRoute(parsed, dungeon) })
+                        setCurrentPull(0)
+                        setRunError(null)
+                        setDialog(null)
+                        return
+                      }
+
+                      // The run is for another dungeon: switch to it rather
+                      // than making that the reader's problem.
+                      const target = dungeonForRun(parsed)
+                      if (!target) {
                         setRunError(
-                          `That run is ${parsed.run.dungeon}, but ${dungeon.name} is open. ` +
-                          'Switch dungeon and try again.'
+                          `That run is ${parsed.run.dungeon}, which isn't in this season's data.`
                         )
                         return
                       }
-                      setLoadedRun({ run: parsed, imported: runToRoute(parsed, dungeon) })
-                      setCurrentPull(0)
+                      setSlug(target.slug)
+                      setPendingRun(parsed)
                       setRunError(null)
                       setDialog(null)
                     } catch (err) {
