@@ -12,6 +12,12 @@
  * against MDT's pack groupings, which is right the great majority of the time
  * and wrong when a dungeon repeats the same pack composition. Treat the map
  * placement as a strong guess and the forces totals as exact.
+ *
+ * A real run also kills far more things than a dungeon has spawns: adds summoned
+ * during a fight. One Ruby Life Pools +13 killed 40 Primal Thunderclouds against
+ * MDT's 22 spawns, and 21 Scorchlings against 1. They award no enemy forces and
+ * have no place on the map, so they are reported separately as `adds` rather
+ * than counted as a failure to match.
  */
 
 import { PULL_COLORS, emptyRoute, makeId, type Pull, type Route } from './route'
@@ -120,8 +126,10 @@ function slotsFor(dungeon: Dungeon) {
 
 export interface RunRoute {
   route: Route
-  /** Kills with no spawn left to attach them to — usually a re-spawned pack. */
+  /** Forces-awarding kills with no spawn left to attach them to. Should be rare. */
   unmatched: { npcId: number; count: number }[]
+  /** Summoned adds: they award nothing and the map has nowhere to put them. */
+  adds: { npcId: number; count: number }[]
   /** Pack keys the run actually visited, for comparing against the plan. */
   packsPulled: Set<string>
   slotPack: Map<string, string>
@@ -135,8 +143,10 @@ const slotKey = (enemyIdx: number, cloneIdx: number) => `${enemyIdx}:${cloneIdx}
  */
 export function runToRoute(run: KeystoneRun, dungeon: Dungeon): RunRoute {
   const { byNpc, byPack } = slotsFor(dungeon)
+  const forcesFor = new Map(dungeon.enemies.map((e) => [e.id, e.count]))
   const used = new Set<string>()
   const unmatched = new Map<number, number>()
+  const adds = new Map<number, number>()
   const packsPulled = new Set<string>()
   const slotPack = new Map<string, string>()
 
@@ -197,7 +207,11 @@ export function runToRoute(run: KeystoneRun, dungeon: Dungeon): RunRoute {
         take(slot)
         left--
       }
-      if (left > 0) unmatched.set(npcId, (unmatched.get(npcId) ?? 0) + left)
+      if (left > 0) {
+        // Something with no forces and no spawn left is an add, not a miss.
+        const bucket = (forcesFor.get(npcId) ?? 0) > 0 ? unmatched : adds
+        bucket.set(npcId, (bucket.get(npcId) ?? 0) + left)
+      }
     }
 
     return {
@@ -217,6 +231,7 @@ export function runToRoute(run: KeystoneRun, dungeon: Dungeon): RunRoute {
   return {
     route,
     unmatched: [...unmatched].map(([npcId, count]) => ({ npcId, count })),
+    adds: [...adds].map(([npcId, count]) => ({ npcId, count })),
     packsPulled,
     slotPack,
   }

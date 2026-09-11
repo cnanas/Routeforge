@@ -70,10 +70,21 @@ export default function RunPanel({
           </p>
         )}
 
-        {imported.unmatched.length > 0 && (
+        {(imported.unmatched.length > 0 || imported.adds.length > 0) && (
           <p className="run-compare run-compare--muted">
-            {imported.unmatched.reduce((n, u) => n + u.count, 0)} kills had no spawn left to sit on —
-            usually a respawn.
+            {imported.adds.length > 0 && (
+              <>
+                {imported.adds.reduce((n, a) => n + a.count, 0)} summoned adds killed — they award
+                no forces and aren&apos;t on the map.
+              </>
+            )}
+            {imported.unmatched.length > 0 && (
+              <>
+                {' '}
+                {imported.unmatched.reduce((n, u) => n + u.count, 0)} other kills had no spawn left
+                to sit on, usually a respawn.
+              </>
+            )}
           </p>
         )}
 

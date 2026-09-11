@@ -16,20 +16,33 @@ const check = (n: string, c: boolean, d = '') => {
   if (!c) failed++
 }
 
-const RUN_FILE = process.env.RUN_FILE ?? `${process.env.HOME}/Developer/keystone/build/runs/2026-09-07-1601-kr-15.json`
-if (!existsSync(RUN_FILE)) {
-  console.log(`  skip  no run export at ${RUN_FILE} (npm run export-run in keystone)`)
+import { readdirSync } from 'node:fs'
+
+const RUNS_DIR = process.env.RUNS_DIR ?? `${process.env.HOME}/Developer/keystone/build/runs`
+const RUN_FILE = process.env.RUN_FILE ?? (() => {
+  if (!existsSync(RUNS_DIR)) return ''
+  const files = readdirSync(RUNS_DIR).filter((f) => f.endsWith('.json')).sort()
+  return files.length ? `${RUNS_DIR}/${files[files.length - 1]}` : ''
+})()
+
+if (!RUN_FILE || !existsSync(RUN_FILE)) {
+  console.log(`  skip  no run export in ${RUNS_DIR} (npm run export-run in keystone)`)
   process.exit(0)
 }
+console.log(`  using ${RUN_FILE.split('/').pop()}`)
 
 const run = parseRun(readFileSync(RUN_FILE, 'utf8'))
 check('parses a Keystone export', run.format === 'keystone.run')
 check('carries the key level', run.run.level > 0, `level=${run.run.level}`)
 
-const dungeon: Dungeon = JSON.parse(
-  readFileSync(`${process.cwd()}/public/data/dungeons/kings-rest.json`, 'utf8')
-)
-check('run is for this dungeon', run.run.challengeModeId === dungeon.mapID)
+// Find the dungeon the run is actually for, rather than assuming one.
+const dungeonDir = `${process.cwd()}/public/data/dungeons`
+const dungeonFile = readdirSync(dungeonDir).find((name) => {
+  const d = JSON.parse(readFileSync(`${dungeonDir}/${name}`, 'utf8'))
+  return d.mapID === run.run.challengeModeId
+})
+check('the run names a dungeon this repo has', Boolean(dungeonFile), `cmid ${run.run.challengeModeId}`)
+const dungeon: Dungeon = JSON.parse(readFileSync(`${dungeonDir}/${dungeonFile}`, 'utf8'))
 
 const imported = runToRoute(run, dungeon)
 check('every pull became a route pull', imported.route.pulls.length === run.pulls.length,
@@ -38,8 +51,16 @@ check('every pull became a route pull', imported.route.pulls.length === run.pull
 const placed = imported.route.pulls.reduce(
   (n, p) => n + Object.values(p.enemies).reduce((m, c) => m + c.length, 0), 0)
 const killed = run.pulls.reduce((n, p) => n + p.kills.length, 0)
-check('nearly every kill found a spawn', placed >= killed * 0.95, `${placed} of ${killed} placed`)
-check('unmatched kills are reported, not hidden', Array.isArray(imported.unmatched))
+const addCount = imported.adds.reduce((n, a) => n + a.count, 0)
+const missed = imported.unmatched.reduce((n, u) => n + u.count, 0)
+
+// Adds summoned mid-fight have no spawn and award nothing. Of what's left, a
+// handful can still go unplaced -- a respawn, or a patrol MDT models
+// differently -- so the bar is "nearly all", not "all".
+const counting = killed - addCount
+check('nearly every forces-awarding kill found a spawn', missed <= counting * 0.05,
+  `${missed} unplaced of ${counting} counting (${addCount} adds, ${placed} placed)`)
+check('adds are reported separately', Array.isArray(imported.adds))
 
 // No spawn may appear in two pulls: a mob dies once.
 const seen = new Set<string>()
@@ -61,7 +82,7 @@ const routeTotal = rows.length ? rows[rows.length - 1].cumulative : 0
 const logTotal = run.pulls[run.pulls.length - 1].cumulative
 check('forces agree with the log', Math.abs(routeTotal - logTotal) <= logTotal * 0.05,
   `route ${routeTotal} vs log ${logTotal}`)
-check('the key was over 100%', routeTotal > (dungeon.totalCount ?? 0),
+check('the key reached its enemy forces', routeTotal >= (dungeon.totalCount ?? 0),
   `${routeTotal} of ${dungeon.totalCount}`)
 
 const curve = forcesCurve(run)
